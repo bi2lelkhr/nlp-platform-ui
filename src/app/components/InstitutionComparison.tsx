@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from "react";
 import {
   Search,
   Download,
@@ -10,8 +10,8 @@ import {
   Hash,
   ChevronDown,
   ChevronUp,
-  Building
-} from 'lucide-react';
+  Building,
+} from "lucide-react";
 import {
   ScatterChart,
   Scatter,
@@ -23,11 +23,11 @@ import {
   Legend,
   PieChart,
   Pie,
-  Cell
-} from 'recharts';
+  Cell,
+} from "recharts";
 
-// const API_BASE = 'http://127.0.0.1:5000';
-const API_BASE = "https://nlp-backend-l0p2.onrender.com";
+ // const API_BASE = "http://127.0.0.1:5000";
+  const API_BASE = "https://nlp-backend-l0p2.onrender.com";
 
 interface Country {
   id: string;
@@ -57,21 +57,26 @@ export function InstitutionComparison() {
   // State for countries
   const [countries, setCountries] = useState<Country[]>([]);
   const [filteredCountries, setFilteredCountries] = useState<Country[]>([]);
-  const [countrySearch, setCountrySearch] = useState('');
+  const [countrySearch, setCountrySearch] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
 
   // State for institutions
   const [institutions, setInstitutions] = useState<Institution[]>([]);
-  const [filteredInstitutions, setFilteredInstitutions] = useState<Institution[]>([]);
-  const [institutionSearch, setInstitutionSearch] = useState('');
+  const [filteredInstitutions, setFilteredInstitutions] = useState<
+    Institution[]
+  >([]);
+  const [institutionSearch, setInstitutionSearch] = useState("");
   const [topInstitutions, setTopInstitutions] = useState<Institution[]>([]);
   const [loadingInstitutions, setLoadingInstitutions] = useState(false);
 
   // Modal states
   const [showModal, setShowModal] = useState(false);
-  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null);
-  const [institutionDetails, setInstitutionDetails] = useState<InstitutionDetails | null>(null);
+  const [selectedInstitutionId, setSelectedInstitutionId] = useState<
+    string | null
+  >(null);
+  const [institutionDetails, setInstitutionDetails] =
+    useState<InstitutionDetails | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
 
   // --------------------------------------------------
@@ -85,7 +90,7 @@ export function InstitutionComparison() {
         setCountries(data);
         setFilteredCountries(data);
       } catch (err) {
-        console.error('Failed to load countries', err);
+        console.error("Failed to load countries", err);
       }
     }
 
@@ -96,11 +101,11 @@ export function InstitutionComparison() {
   // Filter countries based on search input
   // --------------------------------------------------
   useEffect(() => {
-    if (countrySearch.trim() === '') {
+    if (countrySearch.trim() === "") {
       setFilteredCountries(countries);
     } else {
       const searchLower = countrySearch.toLowerCase();
-      const filtered = countries.filter(country =>
+      const filtered = countries.filter((country) =>
         country.name.toLowerCase().includes(searchLower)
       );
       setFilteredCountries(filtered);
@@ -108,7 +113,7 @@ export function InstitutionComparison() {
   }, [countrySearch, countries]);
 
   // --------------------------------------------------
-  // Load top 6 institutions when country is selected
+  // Load top 6 institutions when country is selected - MODIFIED
   // --------------------------------------------------
   useEffect(() => {
     async function loadTopInstitutions() {
@@ -121,24 +126,30 @@ export function InstitutionComparison() {
 
       setLoadingInstitutions(true);
       try {
-        // First, get all institutions in the country (or first page)
         const res = await fetch(
           `${API_BASE}/api/institutions/search?country_id=${selectedCountry.id}`
         );
-        const allInstitutions = await res.json();
-        
-        // Take top 6 by ranking (or h-index if ranking is not available)
-        const top6 = allInstitutions
-          .sort((a: Institution, b: Institution) => 
-            (a.ranking || 999) - (b.ranking || 999)
-          )
-          .slice(0, 6);
-        
-        setInstitutions(allInstitutions);
-        setFilteredInstitutions(allInstitutions);
+        const allInstitutions: Institution[] = await res.json();
+
+        // Ensure filtering on frontend too, in case backend changes later
+        const valid = allInstitutions.filter(
+          (inst) =>
+            (inst.average_h_index ?? 0) > 0 ||
+            (inst.average_rii ?? 0) > 0
+        );
+
+        // Sort by average_rii DESC, ignore ranking
+        const sorted = [...valid].sort(
+          (a, b) => (b.average_rii ?? 0) - (a.average_rii ?? 0)
+        );
+
+        const top6 = sorted.slice(0, 6);
+
+        setInstitutions(sorted);
+        setFilteredInstitutions(sorted);
         setTopInstitutions(top6);
       } catch (err) {
-        console.error('Failed to load institutions', err);
+        console.error("Failed to load institutions", err);
       } finally {
         setLoadingInstitutions(false);
       }
@@ -151,11 +162,11 @@ export function InstitutionComparison() {
   // Filter institutions based on search input
   // --------------------------------------------------
   useEffect(() => {
-    if (!selectedCountry || institutionSearch.trim() === '') {
+    if (!selectedCountry || institutionSearch.trim() === "") {
       setFilteredInstitutions(institutions);
     } else {
       const searchLower = institutionSearch.toLowerCase();
-      const filtered = institutions.filter(institution =>
+      const filtered = institutions.filter((institution) =>
         institution.name.toLowerCase().includes(searchLower)
       );
       setFilteredInstitutions(filtered);
@@ -170,7 +181,7 @@ export function InstitutionComparison() {
     try {
       const [overviewRes, fieldsRes] = await Promise.all([
         fetch(`${API_BASE}/api/institution/${institutionId}/overview`),
-        fetch(`${API_BASE}/api/institution/${institutionId}/fields`)
+        fetch(`${API_BASE}/api/institution/${institutionId}/fields`),
       ]);
 
       const overview = await overviewRes.json();
@@ -178,10 +189,10 @@ export function InstitutionComparison() {
 
       setInstitutionDetails({
         overview,
-        fields
+        fields,
       });
     } catch (err) {
-      console.error('Failed to load institution details', err);
+      console.error("Failed to load institution details", err);
     } finally {
       setModalLoading(false);
     }
@@ -194,7 +205,7 @@ export function InstitutionComparison() {
     setSelectedCountry(country);
     setCountrySearch(country.name);
     setShowCountryDropdown(false);
-    setInstitutionSearch(''); // Reset institution search
+    setInstitutionSearch(""); // Reset institution search
   };
 
   // --------------------------------------------------
@@ -217,13 +228,20 @@ export function InstitutionComparison() {
   // --------------------------------------------------
   const scatterData = topInstitutions.map((inst) => ({
     name: inst.name,
-    'Average h-Index': inst.average_h_index,
-    'Average RII': inst.average_rii,
-    size: 30 + (inst.average_h_index * 2) // Bubble size based on h-index
+    "Average h-Index": inst.average_h_index,
+    "Average RII": inst.average_rii,
+    size: 30 + (inst.average_h_index ?? 0) * 2, // Bubble size based on h-index
   }));
 
   // Colors for charts
-  const COLORS = ['#10b981', '#14b8a6', '#0d9488', '#0f766e', '#115e59', '#134e4a'];
+  const COLORS = [
+    "#10b981",
+    "#14b8a6",
+    "#0d9488",
+    "#0f766e",
+    "#115e59",
+    "#134e4a",
+  ];
 
   return (
     <div className="p-8">
@@ -235,12 +253,12 @@ export function InstitutionComparison() {
             Compare institutions by country with h-Index and RII metrics
           </p>
         </div>
-        <div className="flex gap-3">
+        {/* <div className="flex gap-3">
           <button className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors">
             <Download className="w-5 h-5" />
             Export Report
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* Country Selection */}
@@ -270,9 +288,13 @@ export function InstitutionComparison() {
                 onClick={() => setShowCountryDropdown(!showCountryDropdown)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-emerald-400/60 hover:text-emerald-400"
               >
-                {showCountryDropdown ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                {showCountryDropdown ? (
+                  <ChevronUp className="w-5 h-5" />
+                ) : (
+                  <ChevronDown className="w-5 h-5" />
+                )}
               </button>
-              
+
               {showCountryDropdown && (
                 <div className="absolute top-full mt-1 w-full bg-[#0a1914] border border-[#1a3d33] rounded-lg overflow-hidden z-20 max-h-60 overflow-y-auto">
                   {filteredCountries.length > 0 ? (
@@ -303,7 +325,9 @@ export function InstitutionComparison() {
                       <Globe2 className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="text-white font-medium">{selectedCountry.name}</div>
+                      <div className="text-white font-medium">
+                        {selectedCountry.name}
+                      </div>
                       <div className="text-emerald-400/60 text-sm">
                         {institutions.length} institutions available
                       </div>
@@ -312,7 +336,7 @@ export function InstitutionComparison() {
                   <button
                     onClick={() => {
                       setSelectedCountry(null);
-                      setCountrySearch('');
+                      setCountrySearch("");
                       setInstitutions([]);
                       setTopInstitutions([]);
                     }}
@@ -350,9 +374,11 @@ export function InstitutionComparison() {
         <div className="bg-[#0f2820] border border-[#1a3d33] rounded-xl p-6">
           <h3 className="text-white mb-4 flex items-center gap-2">
             <Award className="w-5 h-5" />
-            {selectedCountry ? `Top Institutions in ${selectedCountry.name}` : 'Select a Country'}
+            {selectedCountry
+              ? `Top Institutions in ${selectedCountry.name}`
+              : "Select a Country"}
           </h3>
-          
+
           {loadingInstitutions ? (
             <div className="flex items-center justify-center h-40 text-emerald-400">
               Loading institutions...
@@ -367,12 +393,17 @@ export function InstitutionComparison() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white ${
-                        index === 0 ? 'bg-gradient-to-br from-yellow-500 to-yellow-600' :
-                        index === 1 ? 'bg-gradient-to-br from-gray-400 to-gray-500' :
-                        index === 2 ? 'bg-gradient-to-br from-orange-600 to-orange-700' :
-                        'bg-gradient-to-br from-emerald-500 to-emerald-700'
-                      }`}>
+                      <div
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center text-white ${
+                          index === 0
+                            ? "bg-gradient-to-br from-yellow-500 to-yellow-600"
+                            : index === 1
+                            ? "bg-gradient-to-br from-gray-400 to-gray-500"
+                            : index === 2
+                            ? "bg-gradient-to-br from-orange-600 to-orange-700"
+                            : "bg-gradient-to-br from-emerald-500 to-emerald-700"
+                        }`}
+                      >
                         {index + 1}
                       </div>
                       <div>
@@ -382,11 +413,12 @@ export function InstitutionComparison() {
                         <div className="flex items-center gap-4 mt-1 text-sm">
                           <span className="text-teal-400 flex items-center gap-1">
                             <Award className="w-3 h-3" />
-                            h-index: {institution.average_h_index?.toFixed(2) || 'N/A'}
+                            h-index:{" "}
+                            {institution.average_h_index?.toFixed(2) || "N/A"}
                           </span>
                           <span className="text-emerald-400 flex items-center gap-1">
                             <Award className="w-3 h-3" />
-                            RII: {institution.average_rii?.toFixed(2) || 'N/A'}
+                            RII: {institution.average_rii?.toFixed(2) || "N/A"}
                           </span>
                         </div>
                       </div>
@@ -400,7 +432,9 @@ export function InstitutionComparison() {
             </div>
           ) : (
             <div className="flex items-center justify-center h-40 text-emerald-400/60">
-              {selectedCountry ? 'No institutions found' : 'Select a country to view top institutions'}
+              {selectedCountry
+                ? "No institutions found"
+                : "Select a country to view top institutions"}
             </div>
           )}
         </div>
@@ -409,62 +443,11 @@ export function InstitutionComparison() {
       {/* Charts Section */}
       {selectedCountry && topInstitutions.length > 0 && (
         <>
-          {/* Scatter Chart for Top Institutions */}
-          <div className="bg-[#0f2820] border border-[#1a3d33] rounded-xl p-6 mb-6">
-            <h3 className="text-white mb-4">Top Institutions: h-Index vs RII Comparison</h3>
-            <ResponsiveContainer width="100%" height={350}>
-              <ScatterChart>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a3d33" />
-                <XAxis
-                  type="number"
-                  dataKey="Average h-Index"
-                  name="Average h-Index"
-                  stroke="#4ade80"
-                  label={{ value: 'Average h-Index', position: 'insideBottom', offset: -5, fill: '#4ade80' }}
-                />
-                <YAxis
-                  type="number"
-                  dataKey="Average RII"
-                  name="Average RII"
-                  stroke="#4ade80"
-                  label={{ value: 'Average RII', angle: -90, position: 'insideLeft', fill: '#4ade80' }}
-                />
-                <Tooltip
-                  cursor={{ strokeDasharray: '3 3' }}
-                  contentStyle={{
-                    backgroundColor: '#0f2820',
-                    border: '1px solid #1a3d33',
-                    borderRadius: '8px',
-                    color: '#fff',
-                  }}
-                  formatter={(value, name, props) => [
-                    value,
-                    name,
-                    `Institution: ${props.payload.name}`
-                  ]}
-                />
-                <Legend />
-                <Scatter 
-                  name="Top Institutions" 
-                  data={scatterData} 
-                  fill="#10b981"
-                  onClick={(data) => {
-                    const institution = topInstitutions.find(inst => inst.name === data.name);
-                    if (institution) {
-                      handleInstitutionClick(institution.id);
-                    }
-                  }}
-                  style={{ cursor: 'pointer' }}
-                />
-              </ScatterChart>
-            </ResponsiveContainer>
-          </div>
-
           {/* All Institutions Table */}
           <div className="bg-[#0f2820] border border-[#1a3d33] rounded-xl overflow-hidden">
             <div className="p-6 border-b border-[#1a3d33]">
               <h3 className="text-white">
-                All Institutions in {selectedCountry.name} 
+                All Institutions in {selectedCountry.name}
                 {institutionSearch && ` matching "${institutionSearch}"`}
                 <span className="text-emerald-400/60 text-sm ml-2">
                   ({filteredInstitutions.length} found)
@@ -475,11 +458,21 @@ export function InstitutionComparison() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[#1a3d33]">
-                    <th className="px-6 py-4 text-left text-emerald-400/80 text-sm">Rank</th>
-                    <th className="px-6 py-4 text-left text-emerald-400/80 text-sm">Institution</th>
-                    <th className="px-6 py-4 text-center text-emerald-400/80 text-sm">Average h-Index</th>
-                    <th className="px-6 py-4 text-center text-emerald-400/80 text-sm">Average RII</th>
-                    <th className="px-6 py-4 text-center text-emerald-400/80 text-sm">Actions</th>
+                    <th className="px-6 py-4 text-left text-emerald-400/80 text-sm">
+                      Rank
+                    </th>
+                    <th className="px-6 py-4 text-left text-emerald-400/80 text-sm">
+                      Institution
+                    </th>
+                    <th className="px-6 py-4 text-center text-emerald-400/80 text-sm">
+                      Average h-Index
+                    </th>
+                    <th className="px-6 py-4 text-center text-emerald-400/80 text-sm">
+                      Average RII
+                    </th>
+                    <th className="px-6 py-4 text-center text-emerald-400/80 text-sm">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -495,14 +488,14 @@ export function InstitutionComparison() {
                               className={`w-10 h-10 rounded-lg flex items-center justify-center text-white ${
                                 index < 3
                                   ? index === 0
-                                    ? 'bg-gradient-to-br from-yellow-500 to-yellow-600'
+                                    ? "bg-gradient-to-br from-yellow-500 to-yellow-600"
                                     : index === 1
-                                    ? 'bg-gradient-to-br from-gray-400 to-gray-500'
-                                    : 'bg-gradient-to-br from-orange-600 to-orange-700'
-                                  : 'bg-gradient-to-br from-emerald-500 to-emerald-700'
+                                    ? "bg-gradient-to-br from-gray-400 to-gray-500"
+                                    : "bg-gradient-to-br from-orange-600 to-orange-700"
+                                  : "bg-gradient-to-br from-emerald-500 to-emerald-700"
                               }`}
                             >
-                              {institution.ranking || index + 1}
+                              {index + 1} {/* MODIFIED: Use index + 1 instead of ranking */}
                             </div>
                           </div>
                         </td>
@@ -518,18 +511,24 @@ export function InstitutionComparison() {
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-center gap-2 px-3 py-1 bg-teal-500/20 text-teal-400 rounded-full mx-auto w-fit">
                             <Award className="w-4 h-4" />
-                            <span>{institution.average_h_index?.toFixed(2) || 'N/A'}</span>
+                            <span>
+                              {institution.average_h_index?.toFixed(2) || "N/A"}
+                            </span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-center gap-2 px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full mx-auto w-fit">
                             <Award className="w-4 h-4" />
-                            <span>{institution.average_rii?.toFixed(2) || 'N/A'}</span>
+                            <span>
+                              {institution.average_rii?.toFixed(2) || "N/A"}
+                            </span>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-center">
                           <button
-                            onClick={() => handleInstitutionClick(institution.id)}
+                            onClick={() =>
+                              handleInstitutionClick(institution.id)
+                            }
                             className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors"
                           >
                             View Details
@@ -539,7 +538,10 @@ export function InstitutionComparison() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-emerald-400/60">
+                      <td
+                        colSpan={5}
+                        className="px-6 py-12 text-center text-emerald-400/60"
+                      >
                         {institutionSearch
                           ? "No institutions found matching your search"
                           : "No institutions available"}
@@ -561,21 +563,27 @@ export function InstitutionComparison() {
             <div className="flex items-center justify-between p-6 border-b border-[#1a3d33]">
               <div>
                 <h2 className="text-2xl text-white mb-2">
-                  {institutionDetails?.overview?.name || 'Loading...'}
+                  {institutionDetails?.overview?.name || "Loading..."}
                 </h2>
                 <div className="flex items-center gap-6 text-emerald-400/80">
                   <div className="flex items-center gap-2">
                     <Award className="w-4 h-4" />
-                    Average h-Index: <span className="text-white">{institutionDetails?.overview?.average_h_index?.toFixed(2) || 'N/A'}</span>
+                    Average h-Index:{" "}
+                    <span className="text-white">
+                      {institutionDetails?.overview?.average_h_index?.toFixed(
+                        2
+                      ) || "N/A"}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Award className="w-4 h-4" />
-                    Average RII: <span className="text-white">{institutionDetails?.overview?.average_rii?.toFixed(2) || 'N/A'}</span>
+                    Average RII:{" "}
+                    <span className="text-white">
+                      {institutionDetails?.overview?.average_rii?.toFixed(2) ||
+                        "N/A"}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <BookOpen className="w-4 h-4" />
-                    Ranking: <span className="text-white">#{institutionDetails?.overview?.ranking || 'N/A'}</span>
-                  </div>
+                  {/* REMOVED: Ranking section from modal header */}
                 </div>
               </div>
               <button
@@ -600,8 +608,9 @@ export function InstitutionComparison() {
                       <Globe2 className="w-5 h-5" />
                       Research Fields Distribution
                     </h3>
-                    
-                    {institutionDetails?.fields && institutionDetails.fields.length > 0 ? (
+
+                    {institutionDetails?.fields &&
+                    institutionDetails.fields.length > 0 ? (
                       <div className="grid grid-cols-2 gap-6">
                         <div>
                           <div className="h-64">
@@ -612,26 +621,33 @@ export function InstitutionComparison() {
                                   cx="50%"
                                   cy="50%"
                                   labelLine={false}
-                                  label={(entry) => `${entry.field}: ${entry.percentage}%`}
+                                  label={(entry) =>
+                                    `${entry.field}: ${entry.percentage}%`
+                                  }
                                   outerRadius={80}
                                   fill="#8884d8"
                                   dataKey="percentage"
                                 >
-                                  {institutionDetails.fields.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                  ))}
+                                  {institutionDetails.fields.map(
+                                    (entry, index) => (
+                                      <Cell
+                                        key={`cell-${index}`}
+                                        fill={COLORS[index % COLORS.length]}
+                                      />
+                                    )
+                                  )}
                                 </Pie>
                                 <Tooltip
                                   formatter={(value, name, props) => [
                                     `${value}%`,
                                     props.payload.field,
-                                    `Count: ${props.payload.count}`
+                                    `Count: ${props.payload.count}`,
                                   ]}
                                   contentStyle={{
-                                    backgroundColor: '#0f2820',
-                                    border: '1px solid #1a3d33',
-                                    borderRadius: '8px',
-                                    color: '#fff'
+                                    backgroundColor: "#0f2820",
+                                    border: "1px solid #1a3d33",
+                                    borderRadius: "8px",
+                                    color: "#fff",
                                   }}
                                 />
                               </PieChart>
@@ -648,9 +664,14 @@ export function InstitutionComparison() {
                                 <div className="flex items-center gap-3">
                                   <div
                                     className="w-3 h-3 rounded-full"
-                                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                                    style={{
+                                      backgroundColor:
+                                        COLORS[index % COLORS.length],
+                                    }}
                                   />
-                                  <span className="text-white">{field.field}</span>
+                                  <span className="text-white">
+                                    {field.field}
+                                  </span>
                                 </div>
                                 <div className="text-right">
                                   <div className="text-emerald-400 font-medium">
@@ -689,9 +710,11 @@ export function InstitutionComparison() {
           <br />
           2. Select a country from the dropdown to view its top 6 institutions
           <br />
-          3. Use the institution search box to find specific institutions within the selected country
+          3. Use the institution search box to find specific institutions within
+          the selected country
           <br />
-          4. Click "View Details" on any institution to see detailed research field distributions
+          4. Click "View Details" on any institution to see detailed research
+          field distributions
         </p>
       </div>
     </div>

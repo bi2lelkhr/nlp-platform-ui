@@ -27,7 +27,7 @@ import {
 } from "recharts";
 
 // const API_BASE = "http://127.0.0.1:5000";
-const API_BASE = "https://nlp-backend-l0p2.onrender.com";
+ const API_BASE = "https://nlp-backend-l0p2.onrender.com";
 
 interface Country {
   id: string;
@@ -307,13 +307,13 @@ export function CountryComparison() {
             Compare country-level research metrics and institutional performance
           </p>
         </div>
-        <button
+        {/* <button
           className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={!selectedCountry}
         >
           <Download className="w-5 h-5" />
           Export Data
-        </button>
+        </button> */}
       </div>
 
       {/* Country Search */}

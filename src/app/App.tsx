@@ -8,6 +8,7 @@ import { Reports } from "./components/Reports";
 import { CountryComparison } from "./components/CountryComparison";
 import { FieldComparison } from "./components/FieldComparison";
 import {ArticleClassification} from './components/ArticleClassification'
+import {ReportPage} from './components/ReportPage'
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/country-comparison" element={<CountryComparison />} />
             <Route path="/field-comparison" element={<FieldComparison />} />
             <Route path="/classification" element={<ArticleClassification />} />
+          
           </Routes>
         </main>
       </div>

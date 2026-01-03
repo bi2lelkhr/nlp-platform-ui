@@ -61,10 +61,10 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-[#1a3d33]">
-        <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-emerald-500/10 hover:text-emerald-300 w-full transition-all">
+        {/* <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-emerald-500/10 hover:text-emerald-300 w-full transition-all">
           <Settings className="w-5 h-5" />
-          <span>Settings</span>
-        </button>
+          <span>Report</span>
+        </button> */}
       </div>
     </aside>
   );

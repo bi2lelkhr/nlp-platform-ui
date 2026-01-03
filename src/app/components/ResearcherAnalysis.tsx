@@ -70,9 +70,7 @@ interface Article {
 }
 
 interface CoAuthor {
-  id: string;
-  name: string;
-  shared_articles: number;
+  name: string; // Changed: no id field, only name
 }
 
 interface Field {
@@ -113,17 +111,26 @@ export function ResearcherAnalysis() {
   const [totalResearchers, setTotalResearchers] = useState(0);
 
   // Selection states
-  const [selectedResearchers, setSelectedResearchers] = useState<SelectedResearcher[]>([]);
+  const [selectedResearchers, setSelectedResearchers] = useState<
+    SelectedResearcher[]
+  >([]);
   const [isComparing, setIsComparing] = useState(false);
-  const [comparisonMode, setComparisonMode] = useState<'table' | 'charts' | 'radar'>('table');
+  const [comparisonMode, setComparisonMode] = useState<
+    "table" | "charts" | "radar"
+  >("table");
   const [comparisonExpanded, setComparisonExpanded] = useState(false);
 
   // Modal states
   const [showModal, setShowModal] = useState(false);
-  const [selectedResearcherId, setSelectedResearcherId] = useState<string | null>(null);
-  const [researcherDetails, setResearcherDetails] = useState<ResearcherDetails | null>(null);
+  const [selectedResearcherId, setSelectedResearcherId] = useState<
+    string | null
+  >(null);
+  const [researcherDetails, setResearcherDetails] =
+    useState<ResearcherDetails | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"articles" | "coauthors" | "fields">("articles");
+  const [activeTab, setActiveTab] = useState<
+    "articles" | "coauthors" | "fields"
+  >("articles");
 
   // --------------------------------------------------
   // Load top 5 researchers (h-index vs RII) and initial paginated data
@@ -277,18 +284,31 @@ export function ResearcherAnalysis() {
   const loadResearcherDetails = useCallback(async (researcherId: string) => {
     setModalLoading(true);
     try {
-      const [overviewRes, articlesRes, coauthorsRes, fieldsRes] =
+      const [overviewRes, articlesRes, fieldsRes] =
         await Promise.all([
           fetch(`${API_BASE}/api/researcher/${researcherId}/overview`),
           fetch(`${API_BASE}/api/researcher/${researcherId}/articles`),
-          fetch(`${API_BASE}/api/researcher/${researcherId}/coauthors`),
           fetch(`${API_BASE}/api/researcher/${researcherId}/fields`),
         ]);
 
       const overview = await overviewRes.json();
       const articles = await articlesRes.json();
-      const coauthors = await coauthorsRes.json();
       const fields = await fieldsRes.json();
+
+      // Try to fetch coauthors separately with error handling
+      let coauthors: CoAuthor[] = [];
+      try {
+        const coauthorsRes = await fetch(`${API_BASE}/api/researcher/${researcherId}/coauthors`);
+        if (coauthorsRes.ok) {
+          const coauthorsData = await coauthorsRes.json();
+          // Backend returns array of objects with name property
+          coauthors = Array.isArray(coauthorsData) 
+            ? coauthorsData
+            : [];
+        }
+      } catch (coauthorError) {
+        console.warn("Coauthors endpoint failed, showing empty list", coauthorError);
+      }
 
       setResearcherDetails({
         overview,
@@ -298,6 +318,7 @@ export function ResearcherAnalysis() {
       });
     } catch (err) {
       console.error("Failed to load researcher details", err);
+      setResearcherDetails(null);
     } finally {
       setModalLoading(false);
     }
@@ -306,65 +327,73 @@ export function ResearcherAnalysis() {
   // --------------------------------------------------
   // Load researcher details for comparison
   // --------------------------------------------------
-  const loadResearcherForComparison = useCallback(async (researcherId: string) => {
-    try {
-      const [overviewRes, fieldsRes] = await Promise.all([
-        fetch(`${API_BASE}/api/researcher/${researcherId}/overview`),
-        fetch(`${API_BASE}/api/researcher/${researcherId}/fields`),
-      ]);
+  const loadResearcherForComparison = useCallback(
+    async (researcherId: string) => {
+      try {
+        const [overviewRes, fieldsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/researcher/${researcherId}/overview`),
+          fetch(`${API_BASE}/api/researcher/${researcherId}/fields`),
+        ]);
 
-      const overview = await overviewRes.json();
-      const fields = await fieldsRes.json();
+        const overview = await overviewRes.json();
+        const fields = await fieldsRes.json();
 
-      return {
-        overview,
-        fields,
-        articles: [],
-        coauthors: [],
-      };
-    } catch (err) {
-      console.error("Failed to load researcher for comparison", err);
-      return null;
-    }
-  }, []);
+        return {
+          overview,
+          fields,
+          articles: [],
+          coauthors: [],
+        };
+      } catch (err) {
+        console.error("Failed to load researcher for comparison", err);
+        return null;
+      }
+    },
+    []
+  );
 
   // --------------------------------------------------
   // Handle researcher selection for comparison
   // --------------------------------------------------
-  const handleResearcherSelect = useCallback(async (researcher: Researcher) => {
-    const isSelected = selectedResearchers.some(r => r.id === researcher.id);
-    
-    if (isSelected) {
-      // Remove researcher
-      setSelectedResearchers(prev => prev.filter(r => r.id !== researcher.id));
-    } else {
-      // Check if we can add more (max 5)
-      if (selectedResearchers.length >= 5) {
-        alert('You can only compare up to 5 researchers at once');
-        return;
-      }
-      
-      // Add researcher with loading state
-      const newSelected: SelectedResearcher = {
-        ...researcher,
-        loading: true
-      };
-      
-      setSelectedResearchers(prev => [...prev, newSelected]);
-      
-      // Load details for comparison
-      const details = await loadResearcherForComparison(researcher.id);
-      if (details) {
-        setSelectedResearchers(prev =>
-          prev.map(r =>
-            r.id === researcher.id
-              ? { ...r, details, loading: false }
-              : r
-          )
+  const handleResearcherSelect = useCallback(
+    async (researcher: Researcher) => {
+      const isSelected = selectedResearchers.some(
+        (r) => r.id === researcher.id
+      );
+
+      if (isSelected) {
+        // Remove researcher
+        setSelectedResearchers((prev) =>
+          prev.filter((r) => r.id !== researcher.id)
         );
+      } else {
+        // Check if we can add more (max 5)
+        if (selectedResearchers.length >= 5) {
+          alert("You can only compare up to 5 researchers at once");
+          return;
+        }
+
+        // Add researcher with loading state
+        const newSelected: SelectedResearcher = {
+          ...researcher,
+          loading: true,
+        };
+
+        setSelectedResearchers((prev) => [...prev, newSelected]);
+
+        // Load details for comparison
+        const details = await loadResearcherForComparison(researcher.id);
+        if (details) {
+          setSelectedResearchers((prev) =>
+            prev.map((r) =>
+              r.id === researcher.id ? { ...r, details, loading: false } : r
+            )
+          );
+        }
       }
-    }
-  }, [selectedResearchers, loadResearcherForComparison]);
+    },
+    [selectedResearchers, loadResearcherForComparison]
+  );
 
   // --------------------------------------------------
   // Toggle comparison mode
@@ -430,10 +459,10 @@ export function ResearcherAnalysis() {
   // --------------------------------------------------
   const comparisonBarData = selectedResearchers.map((r, index) => ({
     name: r.name.split(" ").pop() || `Researcher ${index + 1}`,
-    "Publications": r.publications,
-    "Citations": r.citations / 100, // Scale down for visualization
+    Publications: r.publications,
+    Citations: r.citations / 100, // Scale down for visualization
     "h-Index": r.hIndex,
-    "RII": r.rii * 100, // Scale up for visualization
+    RII: r.rii * 100, // Scale up for visualization
   }));
 
   const comparisonRadarData = selectedResearchers.map((r, index) => ({
@@ -446,14 +475,28 @@ export function ResearcherAnalysis() {
   }));
 
   const metricsData = [
-    { name: "Publications", key: "publications", format: (v: number) => v.toLocaleString() },
-    { name: "Citations", key: "citations", format: (v: number) => v.toLocaleString() },
+    {
+      name: "Publications",
+      key: "publications",
+      format: (v: number) => v.toLocaleString(),
+    },
+    {
+      name: "Citations",
+      key: "citations",
+      format: (v: number) => v.toLocaleString(),
+    },
     { name: "h-Index", key: "hIndex", format: (v: number) => v },
     { name: "RII", key: "rii", format: (v: number) => v.toFixed(3) },
   ];
 
   // Colors for comparison
-  const COMPARISON_COLORS = ["#10b981", "#3b82f6", "#8b5cf6", "#ef4444", "#f59e0b"];
+  const COMPARISON_COLORS = [
+    "#10b981",
+    "#3b82f6",
+    "#8b5cf6",
+    "#ef4444",
+    "#f59e0b",
+  ];
 
   if (loading) {
     return (
@@ -473,10 +516,10 @@ export function ResearcherAnalysis() {
             Compare up to 5 researchers side-by-side
           </p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors">
+        {/* <button className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors">
           <Download className="w-5 h-5" />
           Export Data
-        </button>
+        </button> */}
       </div>
 
       {/* Selection Panel */}
@@ -488,13 +531,15 @@ export function ResearcherAnalysis() {
                 <Compare className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="text-white font-medium">Selected for Comparison</h3>
+                <h3 className="text-white font-medium">
+                  Selected for Comparison
+                </h3>
                 <p className="text-emerald-400/60 text-sm">
                   {selectedResearchers.length} researcher(s) selected
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               {selectedResearchers.length > 0 && (
                 <button
@@ -505,20 +550,20 @@ export function ResearcherAnalysis() {
                   Clear All
                 </button>
               )}
-              
+
               <button
                 onClick={toggleComparisonMode}
                 disabled={selectedResearchers.length === 0}
                 className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
                   selectedResearchers.length === 0
-                    ? 'bg-gray-500/20 text-gray-400 cursor-not-allowed'
+                    ? "bg-gray-500/20 text-gray-400 cursor-not-allowed"
                     : isComparing
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                    : "bg-emerald-500 hover:bg-emerald-600 text-white"
                 }`}
               >
                 <Compare className="w-4 h-4" />
-                {isComparing ? 'Exit Comparison' : 'Compare Selected'}
+                {isComparing ? "Exit Comparison" : "Compare Selected"}
               </button>
             </div>
           </div>
@@ -532,7 +577,10 @@ export function ResearcherAnalysis() {
               >
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white"
-                  style={{ backgroundColor: COMPARISON_COLORS[index % COMPARISON_COLORS.length] }}
+                  style={{
+                    backgroundColor:
+                      COMPARISON_COLORS[index % COMPARISON_COLORS.length],
+                  }}
                 >
                   {index + 1}
                 </div>
@@ -551,7 +599,11 @@ export function ResearcherAnalysis() {
 
       {/* Comparison Panel */}
       {isComparing && selectedResearchers.length > 0 && (
-        <div className={`bg-[#0f2820] border border-[#1a3d33] rounded-xl overflow-hidden mb-6 transition-all duration-300 ${comparisonExpanded ? 'max-h-[800px]' : 'max-h-[400px]'}`}>
+        <div
+          className={`bg-[#0f2820] border border-[#1a3d33] rounded-xl overflow-hidden mb-6 transition-all duration-300 ${
+            comparisonExpanded ? "max-h-[800px]" : "max-h-[400px]"
+          }`}
+        >
           <div className="flex items-center justify-between p-4 border-b border-[#1a3d33] bg-gradient-to-r from-emerald-500/5 to-teal-500/5">
             <div className="flex items-center gap-3">
               <Sparkles className="w-5 h-5 text-emerald-400" />
@@ -562,29 +614,41 @@ export function ResearcherAnalysis() {
                 Side-by-side Analysis
               </span>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setComparisonMode('table')}
-                  className={`px-3 py-1 rounded text-sm ${comparisonMode === 'table' ? 'bg-emerald-500 text-white' : 'bg-[#1a3d33] text-emerald-400/80 hover:text-emerald-400'}`}
+                  onClick={() => setComparisonMode("table")}
+                  className={`px-3 py-1 rounded text-sm ${
+                    comparisonMode === "table"
+                      ? "bg-emerald-500 text-white"
+                      : "bg-[#1a3d33] text-emerald-400/80 hover:text-emerald-400"
+                  }`}
                 >
                   Table
                 </button>
                 <button
-                  onClick={() => setComparisonMode('charts')}
-                  className={`px-3 py-1 rounded text-sm ${comparisonMode === 'charts' ? 'bg-emerald-500 text-white' : 'bg-[#1a3d33] text-emerald-400/80 hover:text-emerald-400'}`}
+                  onClick={() => setComparisonMode("charts")}
+                  className={`px-3 py-1 rounded text-sm ${
+                    comparisonMode === "charts"
+                      ? "bg-emerald-500 text-white"
+                      : "bg-[#1a3d33] text-emerald-400/80 hover:text-emerald-400"
+                  }`}
                 >
                   Charts
                 </button>
                 <button
-                  onClick={() => setComparisonMode('radar')}
-                  className={`px-3 py-1 rounded text-sm ${comparisonMode === 'radar' ? 'bg-emerald-500 text-white' : 'bg-[#1a3d33] text-emerald-400/80 hover:text-emerald-400'}`}
+                  onClick={() => setComparisonMode("radar")}
+                  className={`px-3 py-1 rounded text-sm ${
+                    comparisonMode === "radar"
+                      ? "bg-emerald-500 text-white"
+                      : "bg-[#1a3d33] text-emerald-400/80 hover:text-emerald-400"
+                  }`}
                 >
                   Radar
                 </button>
               </div>
-              
+
               <button
                 onClick={() => setComparisonExpanded(!comparisonExpanded)}
                 className="p-2 hover:bg-[#1a3d33] rounded-lg transition-colors"
@@ -599,7 +663,7 @@ export function ResearcherAnalysis() {
           </div>
 
           <div className="p-4 overflow-auto">
-            {comparisonMode === 'table' ? (
+            {comparisonMode === "table" ? (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -608,11 +672,19 @@ export function ResearcherAnalysis() {
                         Metric
                       </th>
                       {selectedResearchers.map((researcher, index) => (
-                        <th key={researcher.id} className="px-4 py-3 text-center text-emerald-400/80 text-sm">
+                        <th
+                          key={researcher.id}
+                          className="px-4 py-3 text-center text-emerald-400/80 text-sm"
+                        >
                           <div className="flex items-center justify-center gap-2">
                             <div
                               className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: COMPARISON_COLORS[index % COMPARISON_COLORS.length] }}
+                              style={{
+                                backgroundColor:
+                                  COMPARISON_COLORS[
+                                    index % COMPARISON_COLORS.length
+                                  ],
+                              }}
                             />
                             {researcher.name.split(" ").pop()}
                           </div>
@@ -622,13 +694,23 @@ export function ResearcherAnalysis() {
                   </thead>
                   <tbody>
                     {metricsData.map((metric) => (
-                      <tr key={metric.key} className="border-b border-[#1a3d33]/50">
+                      <tr
+                        key={metric.key}
+                        className="border-b border-[#1a3d33]/50"
+                      >
                         <td className="px-4 py-3 text-emerald-400 font-medium">
                           {metric.name}
                         </td>
                         {selectedResearchers.map((researcher) => (
-                          <td key={`${researcher.id}-${metric.key}`} className="px-4 py-3 text-center text-white">
-                            {metric.format(researcher[metric.key as keyof Researcher] as number)}
+                          <td
+                            key={`${researcher.id}-${metric.key}`}
+                            className="px-4 py-3 text-center text-white"
+                          >
+                            {metric.format(
+                              researcher[
+                                metric.key as keyof Researcher
+                              ] as number
+                            )}
                           </td>
                         ))}
                       </tr>
@@ -636,10 +718,12 @@ export function ResearcherAnalysis() {
                   </tbody>
                 </table>
               </div>
-            ) : comparisonMode === 'charts' ? (
+            ) : comparisonMode === "charts" ? (
               <div className="grid grid-cols-2 gap-6">
                 <div className="bg-[#1a3d33] rounded-xl p-4">
-                  <h4 className="text-white mb-4 text-center">Publications & Citations</h4>
+                  <h4 className="text-white mb-4 text-center">
+                    Publications & Citations
+                  </h4>
                   <ResponsiveContainer width="100%" height={250}>
                     <RechartsBarChart data={comparisonBarData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#2a4d44" />
@@ -647,21 +731,31 @@ export function ResearcherAnalysis() {
                       <YAxis stroke="#9ca3af" />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#0f2820',
-                          border: '1px solid #1a3d33',
-                          borderRadius: '8px',
-                          color: '#fff',
+                          backgroundColor: "#0f2820",
+                          border: "1px solid #1a3d33",
+                          borderRadius: "8px",
+                          color: "#fff",
                         }}
                       />
                       <Legend />
-                      <Bar dataKey="Publications" fill="#10b981" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="Citations" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                      <Bar
+                        dataKey="Publications"
+                        fill="#10b981"
+                        radius={[4, 4, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="Citations"
+                        fill="#3b82f6"
+                        radius={[4, 4, 0, 0]}
+                      />
                     </RechartsBarChart>
                   </ResponsiveContainer>
                 </div>
-                
+
                 <div className="bg-[#1a3d33] rounded-xl p-4">
-                  <h4 className="text-white mb-4 text-center">h-Index vs RII</h4>
+                  <h4 className="text-white mb-4 text-center">
+                    h-Index vs RII
+                  </h4>
                   <ResponsiveContainer width="100%" height={250}>
                     <RechartsBarChart data={comparisonBarData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#2a4d44" />
@@ -669,14 +763,18 @@ export function ResearcherAnalysis() {
                       <YAxis stroke="#9ca3af" />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#0f2820',
-                          border: '1px solid #1a3d33',
-                          borderRadius: '8px',
-                          color: '#fff',
+                          backgroundColor: "#0f2820",
+                          border: "1px solid #1a3d33",
+                          borderRadius: "8px",
+                          color: "#fff",
                         }}
                       />
                       <Legend />
-                      <Bar dataKey="h-Index" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                      <Bar
+                        dataKey="h-Index"
+                        fill="#8b5cf6"
+                        radius={[4, 4, 0, 0]}
+                      />
                       <Bar dataKey="RII" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                     </RechartsBarChart>
                   </ResponsiveContainer>
@@ -684,7 +782,9 @@ export function ResearcherAnalysis() {
               </div>
             ) : (
               <div className="bg-[#1a3d33] rounded-xl p-4">
-                <h4 className="text-white mb-4 text-center">Performance Radar</h4>
+                <h4 className="text-white mb-4 text-center">
+                  Performance Radar
+                </h4>
                 <ResponsiveContainer width="100%" height={300}>
                   <RadarChart data={comparisonRadarData}>
                     <PolarGrid />
@@ -695,18 +795,22 @@ export function ResearcherAnalysis() {
                         key={index}
                         name={`Researcher ${index + 1}`}
                         dataKey={comparisonRadarData[index].subject}
-                        stroke={COMPARISON_COLORS[index % COMPARISON_COLORS.length]}
-                        fill={COMPARISON_COLORS[index % COMPARISON_COLORS.length]}
+                        stroke={
+                          COMPARISON_COLORS[index % COMPARISON_COLORS.length]
+                        }
+                        fill={
+                          COMPARISON_COLORS[index % COMPARISON_COLORS.length]
+                        }
                         fillOpacity={0.2}
                       />
                     ))}
                     <Legend />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#0f2820',
-                        border: '1px solid #1a3d33',
-                        borderRadius: '8px',
-                        color: '#fff',
+                        backgroundColor: "#0f2820",
+                        border: "1px solid #1a3d33",
+                        borderRadius: "8px",
+                        color: "#fff",
                       }}
                     />
                   </RadarChart>
@@ -809,29 +913,42 @@ export function ResearcherAnalysis() {
             <tbody>
               {displayResearchers.length > 0 ? (
                 displayResearchers.map((r, index) => {
-                  const isSelected = selectedResearchers.some(sr => sr.id === r.id);
-                  const selectedIndex = selectedResearchers.findIndex(sr => sr.id === r.id);
-                  
+                  const isSelected = selectedResearchers.some(
+                    (sr) => sr.id === r.id
+                  );
+                  const selectedIndex = selectedResearchers.findIndex(
+                    (sr) => sr.id === r.id
+                  );
+
                   return (
                     <tr
                       key={r.id}
-                      className={`border-b border-[#1a3d33] transition-colors ${isSelected ? 'bg-emerald-500/10' : 'hover:bg-emerald-500/5'}`}
+                      className={`border-b border-[#1a3d33] transition-colors ${
+                        isSelected
+                          ? "bg-emerald-500/10"
+                          : "hover:bg-emerald-500/5"
+                      }`}
                     >
                       <td className="px-6 py-4">
                         <button
                           onClick={() => handleResearcherSelect(r)}
                           className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all ${
                             isSelected
-                              ? 'bg-emerald-500 border-emerald-500'
-                              : 'border-emerald-500/30 hover:border-emerald-500'
+                              ? "bg-emerald-500 border-emerald-500"
+                              : "border-emerald-500/30 hover:border-emerald-500"
                           }`}
                         >
                           {isSelected ? (
                             <>
                               <Check className="w-5 h-5 text-white" />
-                              <div 
+                              <div
                                 className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs text-white font-bold"
-                                style={{ backgroundColor: COMPARISON_COLORS[selectedIndex % COMPARISON_COLORS.length] }}
+                                style={{
+                                  backgroundColor:
+                                    COMPARISON_COLORS[
+                                      selectedIndex % COMPARISON_COLORS.length
+                                    ],
+                                }}
                               >
                                 {selectedIndex + 1}
                               </div>
@@ -888,11 +1005,11 @@ export function ResearcherAnalysis() {
                             onClick={() => handleResearcherSelect(r)}
                             className={`px-4 py-2 rounded-lg transition-colors ${
                               isSelected
-                                ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400'
-                                : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-400'
+                                ? "bg-red-500/10 hover:bg-red-500/20 text-red-400"
+                                : "bg-blue-500/10 hover:bg-blue-500/20 text-blue-400"
                             }`}
                           >
-                            {isSelected ? 'Remove' : 'Compare'}
+                            {isSelected ? "Remove" : "Compare"}
                           </button>
                         </div>
                       </td>
@@ -928,11 +1045,13 @@ export function ResearcherAnalysis() {
         </p>
 
         <ResponsiveContainer width="100%" height={300}>
-          <RechartsBarChart data={topResearchers.slice(0, 5).map((r) => ({
-            name: r.name.split(" ").pop(),
-            "h-Index": r.hIndex,
-            "RII (x10)": r.rii * 10,
-          }))}>
+          <RechartsBarChart
+            data={topResearchers.slice(0, 5).map((r) => ({
+              name: r.name.split(" ").pop(),
+              "h-Index": r.hIndex,
+              "RII (x10)": r.rii * 10,
+            }))}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#1a3d33" />
             <XAxis dataKey="name" stroke="#4ade80" />
             <YAxis stroke="#4ade80" />
@@ -1151,7 +1270,7 @@ export function ResearcherAnalysis() {
                           {researcherDetails.coauthors.map(
                             (coauthor, index) => (
                               <div
-                                key={`${coauthor.id}-${index}`}
+                                key={`${coauthor.name}-${index}`} // Changed: using name + index as key
                                 className="bg-[#1a3d33] rounded-xl p-4 border border-[#2a4d44] hover:border-emerald-500/50 transition-colors"
                               >
                                 <div className="flex items-center gap-3 mb-3">
@@ -1166,15 +1285,6 @@ export function ResearcherAnalysis() {
                                       Co-author
                                     </p>
                                   </div>
-                                </div>
-                                <div className="flex items-center gap-2 text-emerald-400">
-                                  <Users className="w-4 h-4" />
-                                  <span className="text-white">
-                                    {coauthor.shared_articles}
-                                  </span>
-                                  <span className="text-emerald-400/60">
-                                    shared papers
-                                  </span>
                                 </div>
                               </div>
                             )
@@ -1218,7 +1328,11 @@ export function ResearcherAnalysis() {
                                         (entry, index) => (
                                           <Cell
                                             key={`cell-${index}`}
-                                            fill={COMPARISON_COLORS[index % COMPARISON_COLORS.length]}
+                                            fill={
+                                              COMPARISON_COLORS[
+                                                index % COMPARISON_COLORS.length
+                                              ]
+                                            }
                                           />
                                         )
                                       )}
@@ -1253,7 +1367,9 @@ export function ResearcherAnalysis() {
                                           className="w-3 h-3 rounded-full"
                                           style={{
                                             backgroundColor:
-                                              COMPARISON_COLORS[index % COMPARISON_COLORS.length],
+                                              COMPARISON_COLORS[
+                                                index % COMPARISON_COLORS.length
+                                              ],
                                           }}
                                         />
                                         <span className="text-white">

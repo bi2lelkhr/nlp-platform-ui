@@ -42,10 +42,10 @@ interface Researcher {
 interface CountryContribution {
   country: string;
   country_id: string;
+  iso_code: string;
+  count: number;  // Changed from researcher_count
   percentage: number;
-  researcher_count: number;
-  average_h_index: number;
-  average_rii: number;
+  // Removed average_h_index and average_rii as backend doesn't provide them
 }
 
 interface FieldOverview {
@@ -59,13 +59,286 @@ interface CountryResearchers {
 }
 
 export function FieldComparison() {
+  // Hardcoded list of fields
+  const allFields = [
+    "accounting",
+    "acoustics and ultrasonics",
+    "aerospace engineering",
+    "aging",
+    "agricultural and biological sciences",
+    "agronomy and crop science",
+    "algebra and number theory",
+    "analytical chemistry",
+    "anatomy",
+    "anesthesiology and pain medicine",
+    "animal science and zoology",
+    "anthropology",
+    "applied mathematics",
+    "applied microbiology and biotechnology",
+    "applied psychology",
+    "aquatic science",
+    "archeology",
+    "architecture",
+    "artificial intelligence",
+    "arts and humanities",
+    "astronomy and astrophysics",
+    "atmospheric science",
+    "atomic and molecular physics, and optics",
+    "automotive engineering",
+    "behavioral neuroscience",
+    "biochemistry",
+    "biochemistry, genetics and molecular biology",
+    "bioengineering",
+    "biological psychiatry",
+    "biomaterials",
+    "biomedical engineering",
+    "biophysics",
+    "biotechnology",
+    "building and construction",
+    "business and international management",
+    "business, management and accounting",
+    "cancer research",
+    "cardiology and cardiovascular medicine",
+    "catalysis",
+    "cell biology",
+    "cellular and molecular neuroscience",
+    "ceramics and composites",
+    "chemical engineering",
+    "chemical health and safety",
+    "chemistry",
+    "civil and structural engineering",
+    "classics",
+    "clinical biochemistry",
+    "clinical psychology",
+    "cognitive neuroscience",
+    "communication",
+    "complementary and alternative medicine",
+    "complementary and manual therapy",
+    "computational mathematics",
+    "computational mechanics",
+    "computational theory and mathematics",
+    "computer graphics and computer-aided design",
+    "computer networks and communications",
+    "computer science",
+    "computer science applications",
+    "computer vision and pattern recognition",
+    "condensed matter physics",
+    "conservation",
+    "control and systems engineering",
+    "critical care and intensive care medicine",
+    "cultural studies",
+    "decision sciences",
+    "demography",
+    "dentistry",
+    "dermatology",
+    "development",
+    "developmental and educational psychology",
+    "developmental biology",
+    "developmental neuroscience",
+    "discrete mathematics and combinatorics",
+    "drug discovery",
+    "earth and planetary sciences",
+    "earth-surface processes",
+    "ecological modeling",
+    "ecology",
+    "ecology, evolution, behavior and systematics",
+    "economics and econometrics",
+    "economics, econometrics and finance",
+    "education",
+    "electrical and electronic engineering",
+    "electrochemistry",
+    "electronic, optical and magnetic materials",
+    "emergency medical services",
+    "emergency medicine",
+    "endocrine and autonomic systems",
+    "endocrinology",
+    "endocrinology, diabetes and metabolism",
+    "energy",
+    "energy engineering and power technology",
+    "engineering",
+    "environmental chemistry",
+    "environmental engineering",
+    "environmental science",
+    "epidemiology",
+    "equine",
+    "experimental and cognitive psychology",
+    "family practice",
+    "filtration and separation",
+    "finance",
+    "fluid flow and transfer processes",
+    "food science",
+    "forestry",
+    "fuel technology",
+    "gastroenterology",
+    "gender studies",
+    "general agricultural and biological sciences",
+    "general arts and humanities",
+    "general decision sciences",
+    "general dentistry",
+    "general economics, econometrics and finance",
+    "general energy",
+    "general engineering",
+    "general health professions",
+    "general materials science",
+    "general psychology",
+    "general social sciences",
+    "genetics",
+    "geochemistry and petrology",
+    "geography, planning and development",
+    "geology",
+    "geometry and topology",
+    "geophysics",
+    "geriatrics and gerontology",
+    "global and planetary change",
+    "hardware and architecture",
+    "health",
+    "health informatics",
+    "health information management",
+    "health professions",
+    "health sciences",
+    "health, toxicology and mutagenesis",
+    "hematology",
+    "hepatology",
+    "history",
+    "history and philosophy of science",
+    "horticulture",
+    "human factors and ergonomics",
+    "human-computer interaction",
+    "immunology",
+    "immunology and allergy",
+    "immunology and microbiology",
+    "industrial and manufacturing engineering",
+    "industrial relations",
+    "infectious diseases",
+    "information systems",
+    "information systems and management",
+    "inorganic chemistry",
+    "insect science",
+    "instrumentation",
+    "internal medicine",
+    "issues, ethics and legal aspects",
+    "language and linguistics",
+    "law",
+    "library and information sciences",
+    "life sciences",
+    "linguistics and language",
+    "literature and literary theory",
+    "management information systems",
+    "management of technology and innovation",
+    "management science and operations research",
+    "management, monitoring, policy and law",
+    "marketing",
+    "materials chemistry",
+    "materials science",
+    "mathematical physics",
+    "mathematics",
+    "mechanical engineering",
+    "mechanics of materials",
+    "media technology",
+    "medical laboratory technology",
+    "medical terminology",
+    "medicine",
+    "metals and alloys",
+    "microbiology",
+    "modeling and simulation",
+    "molecular biology",
+    "molecular medicine",
+    "museology",
+    "music",
+    "nature and landscape conservation",
+    "nephrology",
+    "neurology",
+    "neuropsychology and physiological psychology",
+    "neuroscience",
+    "nuclear and high energy physics",
+    "nuclear energy and engineering",
+    "numerical analysis",
+    "nursing",
+    "nutrition and dietetics",
+    "obstetrics and gynecology",
+    "occupational therapy",
+    "ocean engineering",
+    "oceanography",
+    "oncology",
+    "ophthalmology",
+    "oral surgery",
+    "organic chemistry",
+    "organizational behavior and human resource management",
+    "orthodontics",
+    "orthopedics and sports medicine",
+    "otorhinolaryngology",
+    "paleontology",
+    "parasitology",
+    "pathology and forensic medicine",
+    "pediatrics, perinatology and child health",
+    "periodontics",
+    "pharmaceutical science",
+    "pharmacology",
+    "pharmacology, toxicology and pharmaceutics",
+    "pharmacy",
+    "philosophy",
+    "physical and theoretical chemistry",
+    "physical sciences",
+    "physical therapy, sports therapy and rehabilitation",
+    "physics and astronomy",
+    "physiology",
+    "plant science",
+    "political science and international relations",
+    "pollution",
+    "polymers and plastics",
+    "process chemistry and technology",
+    "psychiatry and mental health",
+    "psychology",
+    "public administration",
+    "public health, environmental and occupational health",
+    "pulmonary and respiratory medicine",
+    "radiation",
+    "radiological and ultrasound technology",
+    "radiology, nuclear medicine and imaging",
+    "rehabilitation",
+    "religious studies",
+    "renewable energy, sustainability and the environment",
+    "reproductive medicine",
+    "research and theory",
+    "rheumatology",
+    "safety research",
+    "safety, risk, reliability and quality",
+    "sensory systems",
+    "signal processing",
+    "small animals",
+    "social psychology",
+    "social sciences",
+    "sociology and political science",
+    "software",
+    "soil science",
+    "space and planetary science",
+    "spectroscopy",
+    "speech and hearing",
+    "statistical and nonlinear physics",
+    "statistics and probability",
+    "statistics, probability and uncertainty",
+    "strategy and management",
+    "structural biology",
+    "surfaces, coatings and films",
+    "surgery",
+    "theoretical computer science",
+    "tourism, leisure and hospitality management",
+    "toxicology",
+    "transplantation",
+    "transportation",
+    "urban studies",
+    "urology",
+    "veterinary",
+    "virology",
+    "visual arts and performing arts",
+    "water science and technology"
+  ];
+
   // Field search states
-  const [allFields, setAllFields] = useState<string[]>([]);
   const [filteredFields, setFilteredFields] = useState<string[]>([]);
   const [fieldSearch, setFieldSearch] = useState("");
   const [showFieldDropdown, setShowFieldDropdown] = useState(false);
   const [selectedField, setSelectedField] = useState<string | null>(null);
-  const [isLoadingFields, setIsLoadingFields] = useState(false);
 
   // Field data states
   const [fieldOverview, setFieldOverview] = useState<FieldOverview | null>(
@@ -119,26 +392,11 @@ export function FieldComparison() {
   ];
 
   // --------------------------------------------------
-  // Load all fields on component mount
+  // Initialize filtered fields on component mount
   // --------------------------------------------------
   useEffect(() => {
-    async function loadAllFields() {
-      setIsLoadingFields(true);
-      try {
-        const res = await fetch(`${API_BASE}/api/fields/search?q=`);
-        const data = await res.json();
-        if (data && data.length > 0) {
-          setAllFields(data);
-          setFilteredFields(data.slice(0, 20)); // Show first 20 initially
-        }
-      } catch (err) {
-        console.error("Failed to load fields", err);
-      } finally {
-        setIsLoadingFields(false);
-      }
-    }
-
-    loadAllFields();
+    // Show first 20 fields initially
+    setFilteredFields(allFields.slice(0, 20));
   }, []);
 
   // --------------------------------------------------
@@ -155,7 +413,7 @@ export function FieldComparison() {
       field.toLowerCase().includes(searchLower)
     );
     setFilteredFields(filtered);
-  }, [fieldSearch, allFields]);
+  }, [fieldSearch]);
 
   // --------------------------------------------------
   // Handle field selection
@@ -191,6 +449,7 @@ export function FieldComparison() {
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      console.log("Field overview data:", data); // Debug log
       setFieldOverview(data);
     } catch (err) {
       console.error("Failed to load field overview", err);
@@ -210,7 +469,16 @@ export function FieldComparison() {
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setCountryContributions(data);
+      console.log("Country contributions data:", data); // Debug log
+      // Transform backend data to match our interface
+      const transformedData = data.map((item: any) => ({
+        country: item.country,
+        country_id: item.country_id,
+        iso_code: item.iso_code || "",
+        count: item.count,
+        percentage: item.percentage
+      }));
+      setCountryContributions(transformedData);
     } catch (err) {
       console.error("Failed to load country contributions", err);
     } finally {
@@ -231,6 +499,7 @@ export function FieldComparison() {
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      console.log("Country researchers data:", data); // Debug log
       setCountryResearchers(data);
     } catch (err) {
       console.error("Failed to load country researchers", err);
@@ -353,9 +622,7 @@ export function FieldComparison() {
           : country.country,
       fullName: country.country,
       Percentage: country.percentage,
-      Researchers: country.researcher_count,
-      "Avg H-Index": country.average_h_index,
-      "Avg RII": country.average_rii,
+      Researchers: country.count,  // Changed from researcher_count to count
     }));
 
   // Prepare data for researchers bar chart
@@ -378,7 +645,7 @@ export function FieldComparison() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl text-white mb-2">
-             Research Field Analytics
+            Research Field Analytics
           </h1>
           <p className="text-emerald-400/60">
             Analyze research fields, top researchers, and country contributions
@@ -394,7 +661,7 @@ export function FieldComparison() {
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="Search for a research field (e.g., Computer Science, Medicine, Physics)..."
+              placeholder="Search for a research field (e.g., computer science, medicine, physics)..."
               value={fieldSearch}
               onChange={handleSearchChange}
               onFocus={handleInputFocus}
@@ -423,18 +690,11 @@ export function FieldComparison() {
           >
             <div className="p-2 border-b border-[#1a3d33]">
               <div className="text-xs text-emerald-400/60 px-2 py-1">
-                {isLoadingFields
-                  ? "Loading fields..."
-                  : `${filteredFields.length} fields found`}
+                {`${filteredFields.length} fields found`}
               </div>
             </div>
 
-            {isLoadingFields ? (
-              <div className="px-4 py-8 text-center text-emerald-400 flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Loading research fields...
-              </div>
-            ) : filteredFields.length > 0 ? (
+            {filteredFields.length > 0 ? (
               filteredFields.map((field, index) => (
                 <button
                   key={`${field}-${index}`}
@@ -495,7 +755,7 @@ export function FieldComparison() {
             <div className="bg-[#0f2820] border border-[#1a3d33] rounded-xl p-6">
               <h3 className="text-white mb-6 flex items-center gap-2">
                 <Award className="w-5 h-5" />
-                 Top Researchers by H-Index
+                Top Researchers by H-Index
               </h3>
 
               {loadingOverview ? (
@@ -719,7 +979,7 @@ export function FieldComparison() {
           <div className="bg-[#0f2820] border border-[#1a3d33] rounded-xl p-6 mb-8">
             <h3 className="text-white mb-6 flex items-center gap-2">
               <Globe2 className="w-5 h-5" />
-               Country Contributions
+              Country Contributions
             </h3>
 
             {loadingCountries ? (
@@ -793,16 +1053,16 @@ export function FieldComparison() {
                               {country.country}
                             </div>
                             <div className="text-emerald-400/60 text-sm">
-                              {country.researcher_count} researchers
+                              {country.count} researchers
                             </div>
                           </div>
                         </div>
                         <div className="text-right">
                           <div className="text-emerald-400 text-lg font-medium">
-                            {country.percentage}%
+                            {country.percentage.toFixed(2)}%
                           </div>
                           <div className="text-teal-400 text-sm">
-                            Avg h-index: {country.average_h_index?.toFixed(2)}
+                            Rank: #{index + 1}
                           </div>
                         </div>
                       </div>
@@ -837,8 +1097,8 @@ export function FieldComparison() {
             country contributions.
           </p>
           <div className="mt-8 text-sm text-emerald-400/80">
-            Examples: Computer Science, Medicine, Physics, Engineering, Biology,
-            Chemistry
+            Examples: computer science, medicine, physics, engineering, biology,
+            chemistry
           </div>
         </div>
       )}
